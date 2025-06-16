@@ -1,8 +1,10 @@
 import streamlit as st
+
 from tokenizer import count_tokens
 from llm_costs import estimate_cost, get_all_models
 import pandas as pd
 import matplotlib.pyplot as plt
+from text_preprocessor import optimize_prompt
 
 st.set_page_config(page_title="LLM Token Cost Analyzer", page_icon="🧮")
 
@@ -36,45 +38,51 @@ if st.button("Analyze"):
         ax.set_title("Cost Comparison Across LLMs")
         st.pyplot(fig)
 
-llm_choice = st.selectbox(
-    "Select the LLM for Prompt Optimization",
-    ["gpt-3.5-turbo", "gpt-4", "claude-3-opus", "claude-3-haiku", "perplexity-mixtral", "julias"]
-)
+        # Optimization Section moved inside the Analyze button block
+        llm_choice = st.selectbox(
+            "Select the LLM for Prompt Optimization",
+            ["gpt-3.5-turbo", "gpt-4", "claude-3-opus", "claude-3-haiku", "perplexity-mixtral", "julias"]
+        )
 
-from optimizer import rule_based_optimizer
+        st.header("🛠️ Prompt Optimizer")
 
-# Optimization Section
-st.header("🛠️ Prompt Optimizer")
+        optimized_prompt = optimize_prompt(prompt)
+        tokens_original = count_tokens(prompt, model="gpt-4")
+        tokens_optimized = count_tokens(optimized_prompt, model="gpt-4")
 
-optimized_prompt = rule_based_optimizer(prompt)
-tokens_original = count_tokens(prompt, model="gpt-4")
-tokens_optimized = count_tokens(optimized_prompt, model="gpt-4")
+        st.subheader("📉 Token Usage Comparison")
 
-st.subheader("📉 Token Usage Comparison")
-st.markdown(f"""
+        if tokens_original > 0:
+            reduction_percentage = 100 * (1 - tokens_optimized / tokens_original)
+            st.markdown(f"""
 - 📝 **Original Prompt Tokens:** {tokens_original}  
 - ✨ **Optimized Prompt Tokens:** {tokens_optimized}  
-- 💡 **Reduction:** {tokens_original - tokens_optimized} tokens (~{100 * (1 - tokens_optimized / tokens_original):.2f}%)
-""")
+- 💡 **Reduction:** {tokens_original - tokens_optimized} tokens (~{reduction_percentage:.2f}%)""")
+        else:
+            st.markdown(f"""
+- 📝 **Original Prompt Tokens:** {tokens_original}  
+- ✨ **Optimized Prompt Tokens:** {tokens_optimized}  
+- 💡 **Reduction:** N/A (Original prompt has 0 tokens)""")
 
-st.subheader("🔁 Optimized Prompt")
-st.code(optimized_prompt, language="markdown")
-st.download_button("⬇️ Download Optimized Prompt", optimized_prompt, file_name="optimized_prompt.txt")
+        st.subheader("🔁 Optimized Prompt")
+        st.code(optimized_prompt, language="markdown")
+        st.download_button("⬇️ Download Optimized Prompt", optimized_prompt, file_name="optimized_prompt.txt")
 
-from llm_optimizer import rewrite_prompt_with_llm
+        from llm_optimizer import rewrite_prompt_with_llm
 
-st.subheader("🤖 GPT-3.5 Optimized Prompt")
-if st.button("Generate with GPT-3.5"):
-    with st.spinner("Optimizing with LLM..."):
-        llm_prompt = rewrite_prompt_with_llm(prompt)
-        llm_tokens = count_tokens(llm_prompt, model="gpt-4")
-        token_diff = tokens_original - llm_tokens
-        st.success("✅ Optimization Complete!")
+        st.subheader("🤖 GPT-3.5 Optimized Prompt")
+        if st.button("Generate with GPT-3.5"):
+            with st.spinner("Optimizing with LLM..."):
+                llm_prompt = rewrite_prompt_with_llm(prompt)
+                llm_tokens = count_tokens(llm_prompt, model="gpt-4")
+                token_diff = tokens_original - llm_tokens
+                st.success("✅ Optimization Complete!")
 
-        st.markdown(f"""
+                st.markdown(f"""
         - 🧠 **LLM Optimized Tokens:** {llm_tokens}  
         - 🧮 **Saved Tokens:** {token_diff}  
-        - 🪙 **Estimated Cost Reduction (GPT-4):** ${estimate_cost(token_diff, 'gpt-4')}
-        """)
-        st.code(llm_prompt, language="markdown")
-        st.download_button("⬇️ Download GPT-Optimized Prompt", llm_prompt, file_name="gpt_optimized_prompt.txt")
+        - 🪙 **Estimated Cost Reduction (GPT-4):** ${estimate_cost(token_diff, 'gpt-4')}""")
+                st.code(llm_prompt, language="markdown")
+                st.download_button("⬇️ Download GPT-Optimized Prompt", llm_prompt, file_name="gpt_optimized_prompt.txt")
+
+

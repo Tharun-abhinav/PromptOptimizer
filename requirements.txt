@@ -1,4 +1,1 @@
-openai>=1.10.0
-tiktoken
-python-dotenv
-streamlit
+symspellpy 

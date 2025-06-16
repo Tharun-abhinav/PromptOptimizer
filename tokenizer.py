@@ -1,5 +1,7 @@
 import tiktoken
 from dotenv import load_dotenv
+from text_preprocessor import preprocess_prompt
+
 load_dotenv()
 
 def count_tokens_openai(prompt: str, model: str = "gpt-4") -> int:
@@ -16,11 +18,14 @@ def estimate_gemini_tokens(prompt: str) -> int:
     return int(len(prompt.split()) * 1.3)  # 1.3 tokens per word
 
 def count_tokens(prompt: str, model: str) -> int:
+    # Preprocess the prompt before tokenization
+    preprocessed_prompt = preprocess_prompt(prompt, model)
+    
     if model.startswith("gpt"):
-        return count_tokens_openai(prompt, model)
+        return count_tokens_openai(preprocessed_prompt, model)
     elif "claude" in model:
-        return estimate_claude_tokens(prompt)
+        return estimate_claude_tokens(preprocessed_prompt)
     elif "gemini" in model:
-        return estimate_gemini_tokens(prompt)
+        return estimate_gemini_tokens(preprocessed_prompt)
     else:
-        return len(prompt.split())  # fallback
+        return len(preprocessed_prompt.split())  # fallback
